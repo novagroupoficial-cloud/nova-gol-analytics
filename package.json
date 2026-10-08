@@ -1,0 +1,11 @@
+{
+  "name": "nova-gol-analytics",
+  "version": "4.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nova Gol Analytics - estadísticas reales de fútbol con acceso Premium vía Hotmart",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@netlify/blobs": "^8.2.0"
+  }
+}

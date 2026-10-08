@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Administrador de Nova Gol Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <main class="contenedor vista">
+    <div class="titulo-vista"><div><h1>Administrador</h1><p>Gestiona quién tiene acceso Premium.</p></div></div>
+
+    <section class="panel" id="panelClave" style="max-width:480px">
+      <form class="form" id="formClave">
+        <div class="campo"><label for="clave">Clave de administrador</label><input id="clave" type="password" autocomplete="current-password" required></div>
+        <p class="error" id="errClave" role="alert"></p>
+        <button class="btn btn-oro" type="submit">Entrar al panel</button>
+      </form>
+    </section>
+
+    <div id="panelAdmin" hidden>
+      <div class="rejilla" style="margin-bottom:16px">
+        <section class="panel">
+          <h3>Dar acceso manual</h3>
+          <p class="nota">Para ventas fuera de Hotmart. Se genera un código que el cliente usa para entrar con su correo.</p>
+          <form class="form" id="formOtorgar" style="margin-top:12px">
+            <div class="campo"><label for="oEmail">Correo del cliente</label><input id="oEmail" type="email" required></div>
+            <div class="campo"><label for="oDias">Días de acceso</label><input id="oDias" type="number" min="1" max="3650" value="30" required></div>
+            <button class="btn btn-oro" type="submit">Dar acceso</button>
+            <p class="nota" id="resOtorgar" aria-live="polite"></p>
+          </form>
+        </section>
+        <section class="panel">
+          <h3>Quitar acceso</h3>
+          <p class="nota">Corta el acceso de inmediato (la sesión abierta dura como máximo 24 horas).</p>
+          <form class="form" id="formRevocar" style="margin-top:12px">
+            <div class="campo"><label for="rEmail">Correo del cliente</label><input id="rEmail" type="email" required></div>
+            <button class="btn" type="submit">Quitar acceso</button>
+            <p class="nota" id="resRevocar" aria-live="polite"></p>
+          </form>
+        </section>
+      </div>
+      <section class="panel">
+        <div class="panel-cab"><h3>Clientes</h3><button class="btn btn-chico" id="recargar" type="button">Actualizar lista</button></div>
+        <div class="tabla-scroll"><table class="datos"><thead><tr><th>Correo</th><th>Nombre</th><th>Acceso</th><th>Origen</th><th>Plan</th><th>Vence</th><th>Último evento</th></tr></thead><tbody id="filas"></tbody></table></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    (function () {
+      let clave = "";
+      const $ = (s) => document.querySelector(s);
+      const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      async function admin(body) {
+        const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-clave": clave }, body: JSON.stringify(body) });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || "Error " + r.status);
+        return d;
+      }
+      const fecha = (iso) => (iso ? new Date(iso).toLocaleString("es-EC", { dateStyle: "medium", timeStyle: "short" }) : "—");
+      async function listar() {
+        const { usuarios } = await admin({ accion: "listar" });
+        $("#filas").innerHTML = usuarios.length ? usuarios.map((u) => `<tr>
+          <td>${esc(u.email)}</td><td>${esc(u.nombre)}</td>
+          <td>${u.premium ? "Activo" : esc(u.estadoPremium)}</td><td>${esc(u.origen)}</td><td>${esc(u.plan)}</td>
+          <td>${u.hasta ? fecha(u.hasta) : (u.premium ? "Mientras pague" : "—")}</td><td>${esc(u.motivo || "")} ${fecha(u.actualizado)}</td></tr>`).join("")
+          : `<tr><td colspan="7">Todavía no hay clientes registrados.</td></tr>`;
+      }
+      $("#formClave").addEventListener("submit", async (e) => {
+        e.preventDefault(); clave = $("#clave").value; $("#errClave").textContent = "";
+        try { await listar(); $("#panelClave").hidden = true; $("#panelAdmin").hidden = false; }
+        catch (err) { $("#errClave").textContent = err.message; }
+      });
+      $("#formOtorgar").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          const d = await admin({ accion: "otorgar", email: $("#oEmail").value, dias: $("#oDias").value });
+          $("#resOtorgar").innerHTML = `Listo. Envía al cliente: correo <b>${esc(d.email)}</b>, código <b>${esc(d.codigo)}</b> (vence ${fecha(d.hasta)}).`;
+          listar();
+        } catch (err) { $("#resOtorgar").textContent = err.message; }
+      });
+      $("#formRevocar").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try { await admin({ accion: "revocar", email: $("#rEmail").value }); $("#resRevocar").textContent = "Acceso quitado."; listar(); }
+        catch (err) { $("#resRevocar").textContent = err.message; }
+      });
+      $("#recargar").addEventListener("click", () => listar().catch((e) => alert(e.message)));
+    })();
+  </script>
+</body>
+</html>
