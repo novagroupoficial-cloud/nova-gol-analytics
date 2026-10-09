@@ -18,7 +18,7 @@
     </div>`;
   const pie = (extra = "") => `
     <div style="margin-top:auto;padding-top:28px;border-top:2px solid rgba(238,242,234,.25);display:flex;justify-content:space-between;gap:24px;font-size:24px;color:#b9cbbf">
-      <span>${esc(t("ex.fuente"))} +18</span>${extra}
+      <span>${esc(t("ex.fuente"))}</span>${extra}
     </div>`;
   const escudo = (url, px) => (url ? `<img src="${esc(API.escudo(url))}" crossorigin="anonymous" style="width:${px}px;height:${px}px;object-fit:contain" onerror="this.remove()">` : "");
   const letra = (r, px = 44) => {
@@ -117,12 +117,13 @@
             <div style="font-size:34px;color:#b9cbbf">${esc(f.liga.nombre)}${pos ? `. ${esc(t("fi.pos", { p: APP.ordinal(pos), n: f.posicion.equipos }))}` : ""}</div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:64px">
-            ${cifra(`${I.total.v}-${I.total.e}-${I.total.d}`, t("ex.record"))}
+            ${cifra(`${I.total.v}-${I.total.e}-${I.total.d}`, t("ex.recordVED"))}
             ${cifra(I.total.pts, t("i.pts"), "#e9b949")}
             ${cifra(`${I.total.gf}-${I.total.gc}`, t("grp.goles"))}
           </div>
           <div style="margin-top:56px"><div style="font-size:28px;color:#b9cbbf;margin-bottom:14px">${esc(t("ex.forma"))}</div>
-            <div style="display:flex;gap:12px">${f.forma.ult5.resultados.map((r) => letra(r, 64)).join("")}</div></div>
+            <div style="display:flex;gap:12px">${f.forma.ult5.resultados.map((r) => letra(r, 64)).join("")}</div>
+            <div style="font-size:24px;color:#b9cbbf;margin-top:14px;white-space:pre">${esc(t("ex.leyendaVED"))}</div></div>
           ${pie("1/5")}`,
       },
       {
@@ -161,8 +162,8 @@
           ${huecoGrafico("ex-cf", 620)}
           ${leyenda([{ color: C.azul, texto: t("s.casa") }, { color: C.naranja, texto: t("s.fuera") }])}
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:36px">
-            ${cifra(`${I.casa.v}-${I.casa.e}-${I.casa.d}`, `${t("ex.record")} ${t("s.casa").toLowerCase()}`)}
-            ${cifra(`${I.fuera.v}-${I.fuera.e}-${I.fuera.d}`, `${t("ex.record")} ${t("s.fuera").toLowerCase()}`)}
+            ${cifra(`${I.casa.v}-${I.casa.e}-${I.casa.d}`, `${t("ex.recordVED")} ${t("s.casa").toLowerCase()}`)}
+            ${cifra(`${I.fuera.v}-${I.fuera.e}-${I.fuera.d}`, `${t("ex.recordVED")} ${t("s.fuera").toLowerCase()}`)}
           </div>
           ${pie("4/5")}`,
         graficos: (el) => {
@@ -219,7 +220,8 @@
         ${prob(s.o15, t("m.o15"), s.o15 >= 85)}${prob(s.o25, t("m.o25"), s.o25 >= 65)}
         ${prob(s.u25, t("m.u25"), s.u25 >= 60)}${prob(s.btts, t("m.btts"), s.btts >= 65)}
       </div>
-      <div style="display:grid;gap:22px;margin-top:56px">${filas}</div>
+      ${s.o15 >= 85 || s.o25 >= 65 || s.u25 >= 60 || s.btts >= 65 ? `<div style="font-size:24px;color:#e9b949;margin-top:18px">${esc(t("ex.notaDorado"))}</div>` : ""}
+      <div style="display:grid;gap:22px;margin-top:44px">${filas}</div>
       ${pie()}`;
     return renderizar([{ alto: 1920, html }], `nova-gol-${slug(L.nombre)}-${slug(V.nombre)}`);
   }

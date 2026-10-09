@@ -10,6 +10,7 @@
     datos: null,          // respuesta de /api/partidos
     cargaPartidos: null,  // promesa en curso
     planes: {},
+    demoDias: 0,
     filtros: { rango: "semana", buscar: "", liga: "ALL", mercado: "ALL", golden: false },
     ranking: { liga: null, metrica: "over25" },
     fichaCache: new Map(),
@@ -87,6 +88,7 @@
     estado.cargaPartidos = API.partidos()
       .then((d) => {
         estado.datos = d;
+        estado.cargadoEn = Date.now();
         estadoDatos("ok", fmtHora(d.actualizado));
         const f = d.fuentes && d.fuentes.length ? d.fuentes.join(" + ") : "football-data.org";
         $("#pieFuente").textContent = `${t("pie.fuente").replace("football-data.org", f)}`;
@@ -98,9 +100,9 @@
   }
 
   function manejarError(e, contenedor) {
-    if (e && e.status === 401 || (e && (e.codigo === "inactivo" || e.codigo === "sesion_invalida"))) {
+    if (e && e.status === 401 || (e && (e.codigo === "inactivo" || e.codigo === "sesion_invalida" || e.codigo === "demo_terminada"))) {
       API.salir();
-      mostrarPortada(e.message);
+      mostrarPortada(e.message, e.codigo === "demo_terminada" ? "demo" : "entrar");
       return;
     }
     contenedor.innerHTML = `<div class="vacio">${esc(t("x.errorDatos", { m: e.message }))}</div>`;
@@ -292,7 +294,7 @@
       ...(s.golden ? ["", `⭐ ${t("ex.goldenTxt")}`] : []),
       "",
       `📌 ${t("ed.publicado")}`,
-      `${t("ex.fuente")} +18`,
+      `${t("ex.fuente")}`,
     ].join("\n");
   }
 
@@ -660,21 +662,78 @@
     return vistaPartidos(v);
   }
 
-  function mostrarPortada(mensaje) {
+  // ---------- Actualizar (botón y automático cada 30 min) ----------
+  const CADA_MS = 30 * 60 * 1000;
+  async function actualizar() {
+    if ($("#app").hidden || estado.cargaPartidos) return;
+    const b = $("#actualizar");
+    b.disabled = true;
+    estado.fichaCache.clear();
+    estado.ligaCache.clear();
+    try { await cargarPartidos(true); } catch (e) { /* el estado rojo ya lo indica */ }
+    finally { b.disabled = false; }
+    // vuelve a dibujar la vista actual con los datos nuevos, sin cerrar ventanas abiertas
+    if ($("#modal").hidden) {
+      const y = window.scrollY; // mantiene la posición de lectura
+      await enrutar();
+      window.scrollTo(0, y);
+    }
+  }
+  setInterval(() => { if (document.visibilityState === "visible") actualizar(); }, CADA_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && estado.cargadoEn && Date.now() - estado.cargadoEn > CADA_MS) actualizar();
+  });
+
+  function mostrarPortada(mensaje, donde = "entrar") {
     historialPublico();
     $("#app").hidden = true;
     $("#portada").hidden = false;
-    $("#errorEntrar").textContent = mensaje || "";
-    if (mensaje) $("#entrar").scrollIntoView();
+    $("#bannerDemo").hidden = true;
+    $("#errorEntrar").textContent = donde === "entrar" ? mensaje || "" : "";
+    $("#errorDemo").textContent = donde === "demo" ? mensaje || "" : "";
+    if (mensaje) (donde === "demo" && !$("#prueba").hidden ? $("#prueba") : $("#entrar")).scrollIntoView();
+  }
+
+  // Cartel de días restantes de la prueba
+  function pintarBannerDemo() {
+    const s = API.sesion();
+    const b = $("#bannerDemo");
+    if ($("#app").hidden || !s || s.tipo !== "demo" || !s.finDemo) { b.hidden = true; return; }
+    const dias = Math.max(1, Math.ceil((s.finDemo - Date.now()) / 86400000));
+    $(".js-demo-banner").textContent = dias === 1 ? t("demo.bannerUno") : t("demo.banner", { n: dias });
+    const url = estado.planes.anual?.url;
+    $(".js-ver-planes").hidden = !url;
+    if (url) $(".js-ver-planes").href = url;
+    b.hidden = false;
   }
   function mostrarApp() {
     $("#portada").hidden = true;
     $("#app").hidden = false;
+    pintarBannerDemo();
     enrutar();
+  }
+
+  // Glosario de abreviaturas al pie de cada página
+  function pintarGlosario() {
+    const items = [];
+    // la nota de las cifras en dorado va justo después de los mercados
+    for (const i of [1, 2, 3, 4, 5, 6, 7, 14, 8, 9, 10, 11, 12, 13]) {
+      const [termino, significado] = t("glo." + i).split("|");
+      items.push(`<div><dt>${esc(termino)}</dt><dd>${esc(significado)}</dd></div>`);
+    }
+    $$(".js-glosario").forEach((el) => { el.innerHTML = `<h2>${esc(t("glo.titulo"))}</h2><dl>${items.join("")}</dl>`; });
+    $$(".js-aviso").forEach((el) => {
+      el.innerHTML = `<h2><span class="sello18" aria-hidden="true">18+</span>${esc(t("aviso.titulo"))}</h2>
+        <p><b>${esc(t("aviso.18"))}</b></p><p>${esc(t("aviso.ref"))}</p><p>${esc(t("aviso.criterio"))}</p>`;
+    });
   }
 
   function iniciar() {
     I18N.aplicar();
+    pintarGlosario();
+    const tituloActualizar = () => { $("#actualizar").title = t("d.actualizar"); };
+    tituloActualizar();
+    document.addEventListener("idioma", () => { pintarGlosario(); tituloActualizar(); });
     document.addEventListener("click", (e) => {
       const b = e.target.closest("[data-idioma]");
       if (b) I18N.cambiar(b.dataset.idioma);
@@ -697,9 +756,23 @@
       const email = $("#email").value.trim(), codigo = $("#codigo").value.trim();
       $("#errorEntrar").textContent = "";
       if (!email || !codigo) { $("#errorEntrar").textContent = t("e.faltan_datos"); return; }
+      if (!$("#mayorEdad").checked) { $("#errorEntrar").textContent = t("e.menor"); $("#mayorEdad").focus(); return; }
       btn.disabled = true;
       try { await API.entrar(email, codigo); location.hash = "#/partidos"; mostrarApp(); }
       catch (err) { $("#errorEntrar").textContent = err.message; }
+      finally { btn.disabled = false; }
+    });
+
+    $("#formDemo").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = e.submitter || $("#formDemo button");
+      const email = $("#emailDemo").value.trim();
+      $("#errorDemo").textContent = "";
+      if (!email) { $("#errorDemo").textContent = t("e.correo_invalido"); return; }
+      if (!$("#mayorEdadDemo").checked) { $("#errorDemo").textContent = t("e.menor"); $("#mayorEdadDemo").focus(); return; }
+      btn.disabled = true;
+      try { await API.demo(email); location.hash = "#/partidos"; mostrarApp(); }
+      catch (err) { $("#errorDemo").textContent = err.message; }
       finally { btn.disabled = false; }
     });
 
@@ -711,6 +784,7 @@
     });
 
     window.addEventListener("hashchange", enrutar);
+    $("#actualizar").addEventListener("click", actualizar);
 
     const pintarPlanes = () => {
       const pl = estado.planes;
@@ -724,12 +798,28 @@
       // Sin plan mensual configurado, se oculta su tarjeta
       $$(".js-comprar[data-plan=mensual]").forEach((a) => (a.closest(".plan").hidden = !pl.mensual?.url));
     };
-    API.config().then((c) => { estado.planes = c.planes || { anual: { url: c.hotmartUrl } }; pintarPlanes(); });
-    document.addEventListener("idioma", pintarPlanes);
+    const pintarDemo = () => {
+      const d = estado.demoDias;
+      $("#prueba").hidden = !d;
+      $(".js-cta-demo").hidden = !d;
+      $(".js-cta-comprar").hidden = !!d;
+      if (d) {
+        $(".js-cta-demo").textContent = t("demo.heroe", { d });
+        $(".js-demo-titulo").textContent = t("demo.titulo", { d });
+        $(".js-demo-sub").textContent = t("demo.sub", { d });
+      }
+      pintarBannerDemo();
+    };
+    API.config().then((c) => {
+      estado.planes = c.planes || { anual: { url: c.hotmartUrl } };
+      estado.demoDias = c.demoDias || 0;
+      pintarPlanes(); pintarDemo();
+    });
+    document.addEventListener("idioma", () => { pintarPlanes(); pintarDemo(); });
 
     API.sesionValida()
       .then((s) => (s ? mostrarApp() : mostrarPortada()))
-      .catch((e) => mostrarPortada(e.message));
+      .catch((e) => mostrarPortada(e.message, e.codigo === "demo_terminada" ? "demo" : "entrar"));
   }
 
   window.APP = { metricas, textoEditorial, fmtFechaHora, fmtNum, pais, ordinal, esc, fmtFecha: (iso) => new Intl.DateTimeFormat(I18N.locale, { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso)) };

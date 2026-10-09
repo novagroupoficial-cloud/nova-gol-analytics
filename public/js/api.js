@@ -64,6 +64,11 @@
       guardar(s);
       return s;
     },
+    async demo(email) {
+      const s = await pedir("/api/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion: "demo", email }) });
+      guardar(s);
+      return s;
+    },
     salir() { guardar(null); },
     async config() { return pedir("/api/acceso").catch(() => ({})); },
     partidos: () => datos("/api/partidos"),

@@ -40,11 +40,16 @@
             <button class="btn" type="submit">Quitar acceso</button>
             <p class="nota" id="resRevocar" aria-live="polite"></p>
           </form>
+          <form class="form" id="formReiniciar" style="margin-top:20px">
+            <div class="campo"><label for="dEmail">Dar otra prueba gratis a un correo</label><input id="dEmail" type="email" required></div>
+            <button class="btn" type="submit">Reiniciar prueba</button>
+            <p class="nota" id="resDemo" aria-live="polite"></p>
+          </form>
         </section>
       </div>
       <section class="panel">
         <div class="panel-cab"><h3>Clientes</h3><button class="btn btn-chico" id="recargar" type="button">Actualizar lista</button></div>
-        <div class="tabla-scroll"><table class="datos"><thead><tr><th>Correo</th><th>Nombre</th><th>Acceso</th><th>Origen</th><th>Plan</th><th>Vence</th><th>Último evento</th></tr></thead><tbody id="filas"></tbody></table></div>
+        <div class="tabla-scroll"><table class="datos"><thead><tr><th>Correo</th><th>Nombre</th><th>Acceso</th><th>Origen</th><th>Plan</th><th>Prueba</th><th>Vence</th><th>Último evento</th></tr></thead><tbody id="filas"></tbody></table></div>
       </section>
     </div>
   </main>
@@ -64,9 +69,9 @@
         const { usuarios } = await admin({ accion: "listar" });
         $("#filas").innerHTML = usuarios.length ? usuarios.map((u) => `<tr>
           <td>${esc(u.email)}</td><td>${esc(u.nombre)}</td>
-          <td>${u.premium ? "Activo" : esc(u.estadoPremium)}</td><td>${esc(u.origen)}</td><td>${esc(u.plan)}</td>
+          <td>${u.premium ? "Activo" : esc(u.estadoPremium)}</td><td>${esc(u.origen)}</td><td>${esc(u.plan)}</td><td>${u.demoInicio ? (u.demoActiva ? "Activa desde " + fecha(u.demoInicio) : "Terminada") : "—"}</td>
           <td>${u.hasta ? fecha(u.hasta) : (u.premium ? "Mientras pague" : "—")}</td><td>${esc(u.motivo || "")} ${fecha(u.actualizado)}</td></tr>`).join("")
-          : `<tr><td colspan="7">Todavía no hay clientes registrados.</td></tr>`;
+          : `<tr><td colspan="8">Todavía no hay clientes registrados.</td></tr>`;
       }
       $("#formClave").addEventListener("submit", async (e) => {
         e.preventDefault(); clave = $("#clave").value; $("#errClave").textContent = "";
@@ -85,6 +90,11 @@
         e.preventDefault();
         try { await admin({ accion: "revocar", email: $("#rEmail").value }); $("#resRevocar").textContent = "Acceso quitado."; listar(); }
         catch (err) { $("#resRevocar").textContent = err.message; }
+      });
+      $("#formReiniciar").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try { await admin({ accion: "reiniciar_demo", email: $("#dEmail").value }); $("#resDemo").textContent = "Listo: ese correo puede volver a probar la app."; listar(); }
+        catch (err) { $("#resDemo").textContent = err.message; }
       });
       $("#recargar").addEventListener("click", () => listar().catch((e) => alert(e.message)));
     })();

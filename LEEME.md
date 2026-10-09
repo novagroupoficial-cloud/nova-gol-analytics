@@ -47,6 +47,7 @@ En Netlify: **Site configuration → Environment variables**.
 | `PRECIO_MENSUAL` | No | Texto del precio mensual. Por defecto `USD 12,90` |
 | `HOTMART_PLANES_MENSUALES` | No | ID(s) del plan mensual en Hotmart, separados por coma. Si el nombre del plan contiene "mensual", se detecta solo. |
 | `HOTMART_PRODUCTO_ID` | No | ID del producto en Hotmart, para ignorar ventas de otros productos tuyos |
+| `DEMO_DIAS` | No | Días de prueba gratis por correo, sin código. Por defecto `7`. Pon `0` para desactivar la prueba (por ejemplo, al lanzar solo con Hotmart). |
 | `LIGAS` | No | Por defecto `PL,PD,SA,BL1,FL1,CL,PPL,DED,BSA` (máximo 10) |
 | `DIAS_ADELANTE` | No | Días de partidos próximos a mostrar. Por defecto `8` |
 
@@ -64,6 +65,8 @@ Después de guardar: **Deploys → Trigger deploy → Deploy site**.
 5. Usa el botón de **prueba** del webhook en Hotmart: debe responder `200`.
 
 ## Cómo funciona el acceso
+
+- **Prueba gratis:** cualquier persona entra con su correo (sin código) y confirma que es mayor de 18 años. Tiene acceso completo durante `DEMO_DIAS` días y ve un cartel con los días que le quedan. Cada correo puede usar la prueba una sola vez; desde `/admin.html` puedes dar otra prueba a un correo.
 
 - **Compra:** Hotmart avisa a la app y el acceso se activa al instante.
 - **Entrar:** el cliente escribe el **correo de su compra** y el **código de transacción** (empieza con HP). Sirve cualquiera de sus códigos.

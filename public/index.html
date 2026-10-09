@@ -48,7 +48,8 @@
           <h1 data-t="p.titulo"></h1>
           <p class="lead" data-t="p.lead"></p>
           <div class="heroe-acciones">
-            <a class="btn btn-oro js-comprar" href="#planes" data-t="p.comprar"></a>
+            <a class="btn btn-oro js-cta-demo" href="#prueba" hidden></a>
+            <a class="btn btn-oro js-comprar js-cta-comprar" href="#planes" data-t="p.comprar"></a>
             <a class="btn" href="#entrar" data-t="p.entrar"></a>
           </div>
         </div>
@@ -105,6 +106,22 @@
         </div>
       </section>
 
+      <section class="plan plan-premium prueba" id="prueba" hidden>
+        <div>
+          <h2 class="js-demo-titulo"></h2>
+          <p class="sub js-demo-sub"></p>
+        </div>
+        <form class="form" id="formDemo" novalidate>
+          <div class="campo">
+            <label for="emailDemo" data-t="demo.correo"></label>
+            <input id="emailDemo" type="email" autocomplete="email" required>
+          </div>
+          <label class="interruptor"><input type="checkbox" id="mayorEdadDemo" required><span data-t="p.mayor"></span></label>
+          <p class="error" id="errorDemo" role="alert"></p>
+          <button class="btn btn-oro" type="submit" data-t="demo.boton"></button>
+        </form>
+      </section>
+
       <section class="planes" id="planes">
         <div class="plan plan-premium">
           <span class="plan-sello" data-t="p.recomendado"></span>
@@ -133,7 +150,7 @@
 
         <div class="plan" id="entrar">
           <h3 data-t="p.yaTengo"></h3>
-          <p class="sub" data-t="p.yaTengoSub"></p>
+          <p class="sub" data-t="p.yaTengoSub2"></p>
           <form class="form" id="formEntrar" novalidate>
             <div class="campo">
               <label for="email" data-t="p.correo"></label>
@@ -144,6 +161,7 @@
               <input id="codigo" name="codigo" type="text" autocomplete="off" autocapitalize="characters" placeholder="HP0000000000" required>
               <small data-t="p.codigoAyuda"></small>
             </div>
+            <label class="interruptor"><input type="checkbox" id="mayorEdad" required><span data-t="p.mayor"></span></label>
             <p class="error" id="errorEntrar" role="alert"></p>
             <button class="btn btn-oro" type="submit" data-t="p.botonEntrar"></button>
           </form>
@@ -152,6 +170,8 @@
     </main>
 
     <footer class="pie contenedor">
+      <section class="aviso-legal js-aviso" role="note"></section>
+      <section class="glosario js-glosario"></section>
       <p data-t="pie.legal"></p>
       <p data-t="pie.fuente"></p>
     </footer>
@@ -172,6 +192,7 @@
         </nav>
         <div class="barra-der">
           <span class="estado-datos"><span class="punto" id="puntoDatos"></span><span id="estadoDatos" data-t="d.cargando"></span></span>
+          <button class="btn btn-chico btn-icono" id="actualizar" type="button" data-t-aria="d.actualizar"><span aria-hidden="true">↻</span></button>
           <div class="idiomas" role="group" aria-label="Idioma / Language">
             <button type="button" data-idioma="es">ES</button>
             <button type="button" data-idioma="en">EN</button>
@@ -182,9 +203,14 @@
       </div>
     </header>
 
+    <div class="contenedor" id="bannerDemo" hidden>
+      <div class="banner-demo"><span class="js-demo-banner"></span><a class="btn btn-chico btn-oro js-ver-planes" href="#" target="_blank" rel="noopener" data-t="demo.verPlanes"></a></div>
+    </div>
     <main class="vista contenedor" id="vista" tabindex="-1"></main>
 
     <footer class="pie contenedor">
+      <section class="aviso-legal js-aviso" role="note"></section>
+      <section class="glosario js-glosario"></section>
       <p data-t="pie.legal"></p>
       <p id="pieFuente" data-t="pie.fuente"></p>
     </footer>

@@ -6,10 +6,16 @@
 //   HOTMART_PRODUCTO_ID   (opcional) ID del producto en Hotmart; si se define, ignora otros productos
 //   HOTMART_DIAS_PERIODO  (opcional) días de acceso tras el último pago si cancela la suscripción (365, plan anual)
 //   ADMIN_CLAVE           (obligatoria para el panel) clave del panel de administrador
+//   DEMO_DIAS             (opcional) días de prueba gratis por correo (7). Con 0 se desactiva la prueba.
 
 import crypto from "node:crypto";
 
 const DIA = 24 * 3600 * 1000;
+export const DEMO_DIAS = () => { const n = parseInt(process.env.DEMO_DIAS ?? "7", 10); return Number.isFinite(n) && n > 0 ? n : 0; };
+export function finDemo(u) {
+  return u.demo_inicio ? Date.parse(u.demo_inicio) + DEMO_DIAS() * DIA : null;
+}
+export const demoVigente = (u) => DEMO_DIAS() > 0 && !!u.demo_inicio && finDemo(u) > Date.now();
 
 // ---------- Almacenamiento (Netlify Blobs) ----------
 let _store = null;
@@ -76,10 +82,11 @@ export function leerFirma(token) {
 
 export function emitirSesion(u, tipo = "premium") {
   const ahora = Date.now();
-  // Sesión corta (24 h) para que un reembolso o cancelación se aplique pronto
+  // Sesión corta (24 h) para que un reembolso, una cancelación o el fin de la prueba se apliquen pronto
   let exp = ahora + DIA;
-  if (u.premium?.hasta) exp = Math.min(exp, Date.parse(u.premium.hasta));
-  return { token: firmar({ e: u.email, t: tipo, iat: ahora, exp }), tipo, exp, email: u.email };
+  if (tipo === "premium" && u.premium?.hasta) exp = Math.min(exp, Date.parse(u.premium.hasta));
+  if (tipo === "demo") exp = Math.min(exp, finDemo(u));
+  return { token: firmar({ e: u.email, t: tipo, iat: ahora, exp }), tipo, exp, email: u.email, finDemo: tipo === "demo" ? finDemo(u) : null };
 }
 
 // Para proteger los endpoints de datos

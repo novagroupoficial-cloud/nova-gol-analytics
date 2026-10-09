@@ -2,7 +2,7 @@
 import { json } from "../lib/futbol.mjs";
 import {
   normalizarEmail, emailValido, leerUsuario, guardarUsuario, listarUsuarios,
-  premiumVigente, compararSeguro, codigoManual,
+  premiumVigente, compararSeguro, codigoManual, demoVigente,
 } from "../lib/acceso.mjs";
 
 export default async (req) => {
@@ -24,6 +24,8 @@ export default async (req) => {
       plan: u.premium?.plan || (u.premium?.periodo_dias === 31 ? "Mensual" : u.premium?.origen === "hotmart" ? "Anual" : ""),
       hasta: u.premium?.hasta || null,
       motivo: u.premium?.motivo || "",
+      demoInicio: u.demo_inicio || null,
+      demoActiva: demoVigente(u),
       actualizado: u.actualizado,
     })).sort((a, b) => String(b.actualizado).localeCompare(String(a.actualizado)));
     return json({ usuarios });
@@ -49,6 +51,11 @@ export default async (req) => {
     if (!u.premium) return json({ error: "Ese correo no tiene Premium." }, 404);
     u.premium.estado = "revocado";
     u.premium.motivo = "REVOCADO_POR_ADMIN";
+    await guardarUsuario(u);
+    return json({ ok: true, email });
+  }
+  if (body.accion === "reiniciar_demo") {
+    delete u.demo_inicio;
     await guardarUsuario(u);
     return json({ ok: true, email });
   }
